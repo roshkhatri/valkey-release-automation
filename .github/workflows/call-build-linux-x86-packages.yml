@@ -55,7 +55,7 @@ jobs:
         run: |
           set -euo pipefail
 
-          ldd -v
+          ldd --version
 
           VERSION="${{ inputs.version }}"
           echo "Building for version: $VERSION"
@@ -81,7 +81,7 @@ jobs:
           rsync -av --exclude='*.c' --exclude='*.d' --exclude='*.o' src/valkey-* "$TAR_FILE_NAME/bin/"
           cp -v COPYING "$TAR_FILE_NAME/share/LICENSE"
           
-          ldd -v $TAR_FILE_NAME/bin/valkey-server
+          ldd --version $TAR_FILE_NAME/bin/valkey-server
           
           tar -czvf $TAR_FILE_NAME.tar.gz $TAR_FILE_NAME
           sha256sum $TAR_FILE_NAME.tar.gz > $TAR_FILE_NAME.tar.gz.sha256
