@@ -49,13 +49,13 @@ jobs:
           role-to-assume: ${{ secrets.role_to_assume }}
 
       - name: Install dependencies
-        run: sudo apt-get update && sudo apt-get install -y build-essential libssl-dev libsystemd-dev llvm-tools
+        run: sudo apt-get update && sudo apt-get install -y build-essential libssl-dev libsystemd-dev
 
       - name: Make Valkey
         run: |
           set -euo pipefail
 
-          lld -v
+          ldd -v
 
           VERSION="${{ inputs.version }}"
           echo "Building for version: $VERSION"
@@ -81,7 +81,7 @@ jobs:
           rsync -av --exclude='*.c' --exclude='*.d' --exclude='*.o' src/valkey-* "$TAR_FILE_NAME/bin/"
           cp -v COPYING "$TAR_FILE_NAME/share/LICENSE"
           
-          lld -v $TAR_FILE_NAME/bin/valkey-server
+          ldd -v $TAR_FILE_NAME/bin/valkey-server
           
           tar -czvf $TAR_FILE_NAME.tar.gz $TAR_FILE_NAME
           sha256sum $TAR_FILE_NAME.tar.gz > $TAR_FILE_NAME.tar.gz.sha256
