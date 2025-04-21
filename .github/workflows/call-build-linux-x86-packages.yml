@@ -49,7 +49,7 @@ jobs:
           role-to-assume: ${{ secrets.role_to_assume }}
 
       - name: Install dependencies
-        run: sudo apt-get update && sudo apt-get install -y build-essential libssl-dev libsystemd-dev
+        run: sudo apt-get update && sudo apt-get install -y build-essential libssl-dev libsystemd-dev llvm-tools
 
       - name: Make Valkey
         run: |
