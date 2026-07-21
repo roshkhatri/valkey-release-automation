@@ -51,6 +51,10 @@ jobs:
           repository: ${{ github.repository_owner }}/valkey-doc
           token: ${{ github.repository_owner == 'valkey-io' && steps.generate-token.outputs.token || secrets.AUTOMATION_PAT }}
           path: valkey-doc
+          # Full history: fetch-tags with the default shallow depth only follows
+          # tags reachable from the default branch tip, so older-line tags
+          # (e.g. 8.1.x when main is at 9.x) would be missing.
+          fetch-depth: 0
           fetch-tags: true
 
       - name: Create tag in valkey-doc
@@ -66,16 +70,30 @@ jobs:
             exit 1
           fi
 
-          # Check if the tag already exists remotely
-          if git ls-remote --tags origin "refs/tags/${VERSION}" | grep -q "${VERSION}"; then
-            echo "Tag '${VERSION}' already exists remotely. Nothing to do."
-            exit 0
+          # Peel to the commit: previous tags may be annotated, and tagging the
+          # tag object would not put the new tag directly on the same commit.
+          EXPECTED=$(git rev-parse "${PREVIOUS}^{commit}")
+
+          # If the tag already exists remotely, verify it points at the expected
+          # commit (peeled ^{} line for annotated tags, plain line for lightweight).
+          REMOTE=$(git ls-remote origin "refs/tags/${VERSION}" "refs/tags/${VERSION}^{}")
+          if [[ -n "$REMOTE" ]]; then
+            EXISTING=$(echo "$REMOTE" | awk -v ref="refs/tags/${VERSION}^{}" '$2 == ref {print $1}')
+            if [[ -z "$EXISTING" ]]; then
+              EXISTING=$(echo "$REMOTE" | awk -v ref="refs/tags/${VERSION}" '$2 == ref {print $1}')
+            fi
+            if [[ "$EXISTING" == "$EXPECTED" ]]; then
+              echo "Tag '${VERSION}' already exists at expected commit ${EXPECTED}. Nothing to do."
+              exit 0
+            fi
+            echo "::error::Tag '${VERSION}' already exists but points at ${EXISTING}, expected ${EXPECTED} (commit of '${PREVIOUS}')."
+            exit 1
           fi
 
           # Create lightweight tag pointing at the same commit as the previous tag
-          git tag "${VERSION}" "${PREVIOUS}"
-          git push origin "${VERSION}"
-          echo "Successfully created and pushed tag '${VERSION}' pointing at '${PREVIOUS}'."
+          git tag "${VERSION}" "${EXPECTED}"
+          git push origin "refs/tags/${VERSION}"
+          echo "Successfully created and pushed tag '${VERSION}' pointing at ${EXPECTED} (commit of '${PREVIOUS}')."
 
       - name: Checkout valkey
         if: steps.check-release.outputs.is_major_minor == 'true'
